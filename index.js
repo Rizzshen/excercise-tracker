@@ -8,8 +8,7 @@ mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopol
 console.log("MongoDB connected");
 let Person;
 const personSchema = new mongoose.Schema({
-  name: {type: String,required: true}
-  
+  username: {type: String,required: true}  
 });
 Person = mongoose.model('Person', personSchema);
 
@@ -19,11 +18,29 @@ app.use(express.static('public'))
 app.get('/', (req, res) => {
   res.sendFile(__dirname + '/views/index.html')
 });
+
 app.post('/api/users', async (req,res)=>{
-  let user = new Person({name: req.body.username});
+  let user = new Person({username: req.body.username});
   let data = await user.save();
-  console.log(data);
-  res.json({"username": data.name, "id": data._id});
+  res.json({"username": data.username, "id": data._id});
+});
+
+app.get('/api/users', async(req,res) =>{
+  try{
+    let person = await Person.find()
+    res.json(person);
+  }
+  catch{
+    res.json({"err": "From get method"})
+  }
+});
+
+app.post('/api/users/:_id/exercises', async(req,res)=> {
+  let person = await Person.find({_id: req.params._id});
+  console.log(req.params._id);
+  console.log(person);
+
+  res.json({"username": person[0].username, "description": req.body.description , "duration": req.body.duration, "date": req.body.date, "_id": req.params._id});
 });
 
 
