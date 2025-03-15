@@ -1,52 +1,94 @@
-const express = require('express')
-const app = express()
-const cors = require('cors')
-const bodyParser = require('body-parser')
-require('dotenv').config()
-const mongoose = require('mongoose');
-mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true });
+const express = require("express");
+const app = express();
+const cors = require("cors");
+const bodyParser = require("body-parser");
+require("dotenv").config();
+const mongoose = require("mongoose");
+mongoose.connect(process.env.MONGO_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+});
 console.log("MongoDB connected");
 let Person;
 const personSchema = new mongoose.Schema({
-  username: {type: String,required: true}  
+  username: { type: String, required: true },
 });
-Person = mongoose.model('Person', personSchema);
-
-app.use(cors())
-app.use(bodyParser.urlencoded({extended: true}));
-app.use(express.static('public'))
-app.get('/', (req, res) => {
-  res.sendFile(__dirname + '/views/index.html')
+Person = mongoose.model("Person", personSchema);
+let exercise;
+const exerciseSchema = new mongoose.Schema({
+  userId: { type: String },
+  description: { type: String },
+  duration: { type: Number },
+  date: { type: String, default: () => new Date().toDateString() },
+});
+exercise = mongoose.model("exercise", exerciseSchema);
+app.use(cors());
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use(express.static("public"));
+app.get("/", (req, res) => {
+  res.sendFile(__dirname + "/views/index.html");
 });
 
-app.post('/api/users', async (req,res)=>{
-  let user = new Person({username: req.body.username});
+app.post("/api/users", async (req, res) => {
+  let user = new Person({ username: req.body.username });
   let data = await user.save();
-  res.json({"username": data.username, "id": data._id});
+  res.json({ username: data.username, _id: data._id });
 });
 
-app.get('/api/users', async(req,res) =>{
-  try{
-    let person = await Person.find()
+app.get("/api/users", async (req, res) => {
+  try {
+    let person = await Person.find();
     res.json(person);
-  }
-  catch{
-    res.json({"err": "From get method"})
+  } catch {
+    res.json({ err: "From get method" });
   }
 });
 
-app.post('/api/users/:_id/exercises', async(req,res)=> {
-  let person = await Person.find({_id: req.params._id});
-  console.log(req.params._id);
-  console.log(person);
-
-  res.json({"username": person[0].username, "description": req.body.description , "duration": req.body.duration, "date": req.body.date, "_id": req.params._id});
+app.post("/api/users/:_id/exercises", async (req, res) => {
+  try {
+    let person = await Person.findOne({ _id: req.params._id });
+    let exercise1 = new exercise({
+      userId: person._id,
+      description: req.body.description,
+      date: req.body.date ? new Date(req.body.date).toDateString() : undefined,
+      duration: req.body.duration,
+    });
+    let data = await exercise1.save();
+    console.log(data);
+    console.log(req.body);
+    return res.json({
+      _id: data.userId,
+      username: person.username,
+      date: data.date,
+      duration: data.duration,
+      description: data.description,
+    });
+  } catch {
+    res.json({ error: "no id found" });
+  }
 });
 
-
-
-
+app.get("/api/users/:_id?/logs", async (req, res) => {
+  try {
+    let exercises = await exercise.find({ userId: req.params._id });
+    let person = await Person.findOne({ _id: req.params._id });
+    const count = exercises.length;
+    const logs = [];
+    for(let i = 0; i < count; i++ ){
+      logs.push({"description": exercises[i].description});
+    }
+    console.log(logs);
+    res.json({
+      _id: person._id,
+      username: person.username,
+      count: count,
+      log: logs,
+    });
+  } catch (error) {
+    res.json({ eror: error });
+  }
+});
 
 const listener = app.listen(process.env.PORT || 3000, () => {
-  console.log('Your app is listening on port ' + listener.address().port)
-})
+  console.log("Your app is listening on port " + listener.address().port);
+});
