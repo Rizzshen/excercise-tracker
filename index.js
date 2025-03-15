@@ -72,22 +72,34 @@ app.get("/api/users/:_id?/logs", async (req, res) => {
   try {
     let exercises = await exercise.find({ userId: req.params._id });
     let person = await Person.findOne({ _id: req.params._id });
-    const count = exercises.length;
+    let count = exercises.length;
     const logs = [];
-    for(let i = 0; i < count; i++ ){
-      logs.push({"description": exercises[i].description});
+    let limit = req.query.limit;
+    let {from, to} = req.query;
+    let yaha = new Date (from);
+    let thyaha = new Date(to);
+    
+    
+    if (!req.query.limit){limit = count}
+    for(let i = 0; i < limit; i++ ){
+      if(yaha < new Date(exercises[i].date)){continue;}
+      if(thyaha > new Date(exercises[i].date)){continue;}
+      logs.push({"description": exercises[i].description, "duration": exercises[i].duration, "date": exercises[i].date});
     }
-    console.log(logs);
     res.json({
       _id: person._id,
       username: person.username,
       count: count,
       log: logs,
     });
-  } catch (error) {
+    console.log(req.query);
+  } 
+  catch (error) {
     res.json({ eror: error });
   }
 });
+
+
 
 const listener = app.listen(process.env.PORT || 3000, () => {
   console.log("Your app is listening on port " + listener.address().port);
