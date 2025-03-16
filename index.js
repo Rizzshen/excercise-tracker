@@ -74,7 +74,7 @@ app.get("/api/users/:_id?/logs", async (req, res) => {
     let person = await Person.findOne({ _id: req.params._id });
     let count = exercises.length;
     const logs = [];
-    let limit = req.query.limit;
+    let limit = req.query.limit ? Number(req.query.limit) : count;
     let {from, to} = req.query;
     let yaha = new Date (from);
     let thyaha = new Date(to);
@@ -82,13 +82,17 @@ app.get("/api/users/:_id?/logs", async (req, res) => {
     
     if (!req.query.limit){limit = count}
     for(let i = 0; i < limit; i++ ){
-      if(yaha < new Date(exercises[i].date)){continue;}
-      if(thyaha > new Date(exercises[i].date)){continue;}
+      if(yaha > new Date(exercises[i].date && yaha)){count = count - 1; continue;}
+      if(thyaha < new Date(exercises[i].date && thyaha)){count = count -1; continue;}
       logs.push({"description": exercises[i].description, "duration": exercises[i].duration, "date": exercises[i].date});
     }
+    if(yaha != "Invalid Date"){var fromDate = yaha.toDateString()}else{var fromDate = req.query.from}
+    if(thyaha != "Invalid Date"){var toDate = thyaha.toDateString()}else{var toDate = req.query.to}
     res.json({
       _id: person._id,
       username: person.username,
+      from: fromDate,
+      to: toDate,
       count: count,
       log: logs,
     });
